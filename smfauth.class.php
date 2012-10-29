@@ -42,13 +42,13 @@ class auth_smfauth extends auth_mysql {
 	global $db_user;
 	global $db_passwd;
 	global $db_prefix;
-	
+
 	// pass variables into config
 	$conf['auth']['mysql']['server']   = $db_server;
 	$conf['auth']['mysql']['user']     = $db_user;
 	$conf['auth']['mysql']['password'] = $db_passwd;
 	$conf['auth']['mysql']['database'] = $db_name;
-	
+
 	// as SMF uses SHA1(concat(username, password))
 	$conf['auth']['mysql']['forwardClearPass'] = 1;
 
@@ -62,98 +62,98 @@ class auth_smfauth extends auth_mysql {
     // more info to be found in mysql.conf.php
     $conf['auth']['mysql']['checkPass']   = "SELECT passwd
                                              FROM ${db_prefix}members
-                                             WHERE memberName = '%{user}'
+                                             WHERE member_name = '%{user}'
                                              AND passwd = SHA1(concat(LOWER('%{user}'), '%{pass}'))";
- 
-    $conf['auth']['mysql']['getUserInfo'] = "SELECT passwd AS pass, realName AS name, emailAddress AS mail
+
+    $conf['auth']['mysql']['getUserInfo'] = "SELECT passwd AS pass, real_name AS name, email_address AS mail
                                              FROM ${db_prefix}members
-                                             WHERE memberName = '%{user}'";
- 
+                                             WHERE member_name = '%{user}'";
+
     // `group` here, don't forget the quotes!
     // trying to get all groups.
     // concat trick to correctly test an ID group
-    $conf['auth']['mysql']['getGroups']   = "SELECT groupName AS `group`
+    $conf['auth']['mysql']['getGroups']   = "SELECT group_name AS `group`
                                              FROM ${db_prefix}membergroups g, ${db_prefix}members u
-                                             WHERE u.memberName = '%{user}'
-                                             AND (concat(',',u.additionalGroups,',') LIKE concat('%,',g.ID_GROUP,',%') OR u.ID_GROUP = g.ID_GROUP)";
+                                             WHERE u.member_name = '%{user}'
+                                             AND (concat(',',u.additional_groups,',') LIKE concat('%,',g.id_group,',%') OR u.id_group = g.id_group)";
 
-    // using both ID_GROUP and additionalGroups in query
-    $conf['auth']['mysql']['getUsers']    = "SELECT DISTINCT memberName AS user
+    // using both id_group and additional_groups in query
+    $conf['auth']['mysql']['getUsers']    = "SELECT DISTINCT member_name AS user
                                              FROM ${db_prefix}members AS u
-                                             LEFT JOIN ${db_prefix}membergroups AS g ON (concat(',',u.additionalGroups,',') LIKE concat('%,',g.ID_GROUP,',%') OR u.ID_GROUP=g.ID_GROUP)";
+                                             LEFT JOIN ${db_prefix}membergroups AS g ON (concat(',',u.additional_groups,',') LIKE concat('%,',g.id_group,',%') OR u.id_group=g.id_group)";
 
-    $conf['auth']['mysql']['FilterLogin'] = "u.memberName LIKE '%{user}'";
-    $conf['auth']['mysql']['FilterName']  = "u.realName LIKE '%{name}'";
-    $conf['auth']['mysql']['FilterEmail'] = "u.emailAddress LIKE '%{email}'";
-    $conf['auth']['mysql']['FilterGroup'] = "g.groupName LIKE '%{group}'";
-    $conf['auth']['mysql']['SortOrder']   = "ORDER BY u.memberName";
+    $conf['auth']['mysql']['FilterLogin'] = "u.member_name LIKE '%{user}'";
+    $conf['auth']['mysql']['FilterName']  = "u.real_name LIKE '%{name}'";
+    $conf['auth']['mysql']['FilterEmail'] = "u.email_address LIKE '%{email}'";
+    $conf['auth']['mysql']['FilterGroup'] = "g.group_name LIKE '%{group}'";
+    $conf['auth']['mysql']['SortOrder']   = "ORDER BY u.member_name";
 
     // default group should be 0, fixed in v0.2
-    // additionalGroups no longer has default value, fixed
+    // additional_groups no longer has default value, fixed
     $conf['auth']['mysql']['addUser']     = "INSERT INTO ${db_prefix}members
-                                             (memberName, dateRegistered, ID_GROUP, realName, passwd, emailAddress, hideEmail, additionalGroups)
+                                             (member_name, dateRegistered, id_group, real_name, passwd, email_address, hideEmail, additional_groups)
                                              VALUES ('%{user}', UNIX_TIMESTAMP(), '0', '%{name}', SHA1(concat(LOWER('%{user}'), '%{pass}')), '%{email}', '1', '10')";
 
-    $conf['auth']['mysql']['addGroup']    = "INSERT INTO ${db_prefix}membergroups (groupName, stars) VALUES ('%{group}','1#star.gif')";
+    $conf['auth']['mysql']['addGroup']    = "INSERT INTO ${db_prefix}membergroups (group_name, stars) VALUES ('%{group}','1#star.gif')";
 
-    // changed in v0.2 to use additionalGroups
+    // changed in v0.2 to use additional_groups
     $conf['auth']['mysql']['addUserGroup']= "UPDATE ${db_prefix}members
-                                             SET additionalGroups = TRIM(BOTH ',' FROM concat(additionalGroups,',','%{gid}'))
-										     WHERE ID_MEMBER = '%{uid}'";
+                                             SET additional_groups = TRIM(BOTH ',' FROM concat(additional_groups,',','%{gid}'))
+                                             WHERE id_member = '%{uid}'";
 
-    $conf['auth']['mysql']['delGroup']    = "DELETE FROM `${db_prefix}membergroups` WHERE `ID_GROUP` = '%{gid}' LIMIT 1";
-																 
-    $conf['auth']['mysql']['getUserID']   = "SELECT ID_MEMBER AS id FROM ${db_prefix}members WHERE memberName = '%{user}' LIMIT 1";
+    $conf['auth']['mysql']['delGroup']    = "DELETE FROM `${db_prefix}membergroups` WHERE `id_group` = '%{gid}' LIMIT 1";
+
+    $conf['auth']['mysql']['getUserID']   = "SELECT id_member AS id FROM ${db_prefix}members WHERE member_name = '%{user}' LIMIT 1";
 
     $conf['auth']['mysql']['delUser']     = "DELETE FROM ${db_prefix}members
-                                             WHERE ID_MEMBER = '%{uid}' LIMIT 1";
-										 
+                                             WHERE id_member = '%{uid}' LIMIT 1";
+
     // long ref list taken from Sources/Subs-Members.php, not a perfect port;
     // missing features such as avatar removal, buddylist cleaning & calendar update etc.
-    // use SMF's interface as a preferable alternative. 
-    $conf['auth']['mysql']['delUserRefs'] = "UPDATE ${db_prefix}messages SET ID_MEMBER = 0, posterEmail = '' WHERE ID_MEMBER = '%{uid}';
-                                             UPDATE ${db_prefix}polls SET ID_MEMBER = 0 WHERE ID_MEMBER = '%{uid}';
-                                             UPDATE ${db_prefix}topics SET ID_MEMBER_STARTED = 0 WHERE ID_MEMBER_STARTED = '%{uid}';
-                                             UPDATE ${db_prefix}topics SET ID_MEMBER_UPDATED = 0 WHERE ID_MEMBER_UPDATED = '%{uid}';
-                                             UPDATE ${db_prefix}log_actions SET ID_MEMBER = 0 WHERE ID_MEMBER = '%{uid}';
-                                             UPDATE ${db_prefix}log_banned SET ID_MEMBER = 0 WHERE ID_MEMBER = '%{uid}';
-                                             UPDATE ${db_prefix}log_errors SET ID_MEMBER = 0 WHERE ID_MEMBER = '%{uid}';
-                                             DELETE FROM ${db_prefix}log_boards WHERE ID_MEMBER = '%{uid}';
-                                             DELETE FROM ${db_prefix}log_karma WHERE ID_TARGET = '%{uid}' OR ID_EXECUTOR = '%{uid}';
-                                             DELETE FROM ${db_prefix}log_mark_read WHERE ID_MEMBER = '%{uid}';
-                                             DELETE FROM ${db_prefix}log_notify WHERE ID_MEMBER = '%{uid}';
-                                             DELETE FROM ${db_prefix}log_online WHERE ID_MEMBER = '%{uid}';
-                                             DELETE FROM ${db_prefix}log_polls WHERE ID_MEMBER = '%{uid}';
-                                             DELETE FROM ${db_prefix}log_topics WHERE ID_MEMBER = '%{uid}';
-                                             DELETE FROM ${db_prefix}collapsed_categories WHERE ID_MEMBER = '%{uid}';
-                                             UPDATE ${db_prefix}personal_messages SET ID_MEMBER_FROM = 0 WHERE ID_MEMBER_FROM = '%{uid}';
-                                             DELETE FROM ${db_prefix}moderators WHERE ID_MEMBER = '%{uid}';
-                                             DELETE FROM ${db_prefix}ban_items WHERE ID_MEMBER = '%{uid}';
-                                             DELETE FROM ${db_prefix}themes WHERE ID_MEMBER = '%{uid}'";
+    // use SMF's interface as a preferable alternative.
+    $conf['auth']['mysql']['delUserRefs'] = "UPDATE ${db_prefix}messages SET id_member = 0, posterEmail = '' WHERE id_member = '%{uid}';
+                                             UPDATE ${db_prefix}polls SET id_member = 0 WHERE id_member = '%{uid}';
+                                             UPDATE ${db_prefix}topics SET id_member_STARTED = 0 WHERE id_member_STARTED = '%{uid}';
+                                             UPDATE ${db_prefix}topics SET id_member_UPDATED = 0 WHERE id_member_UPDATED = '%{uid}';
+                                             UPDATE ${db_prefix}log_actions SET id_member = 0 WHERE id_member = '%{uid}';
+                                             UPDATE ${db_prefix}log_banned SET id_member = 0 WHERE id_member = '%{uid}';
+                                             UPDATE ${db_prefix}log_errors SET id_member = 0 WHERE id_member = '%{uid}';
+                                             DELETE FROM ${db_prefix}log_boards WHERE id_member = '%{uid}';
+                                             DELETE FROM ${db_prefix}log_karma WHERE id_target = '%{uid}' OR id_executor = '%{uid}';
+                                             DELETE FROM ${db_prefix}log_mark_read WHERE id_member = '%{uid}';
+                                             DELETE FROM ${db_prefix}log_notify WHERE id_member = '%{uid}';
+                                             DELETE FROM ${db_prefix}log_online WHERE id_member = '%{uid}';
+                                             DELETE FROM ${db_prefix}log_polls WHERE id_member = '%{uid}';
+                                             DELETE FROM ${db_prefix}log_topics WHERE id_member = '%{uid}';
+                                             DELETE FROM ${db_prefix}collapsed_categories WHERE id_member = '%{uid}';
+                                             UPDATE ${db_prefix}personal_messages SET id_member_from = 0 WHERE id_member_from = '%{uid}';
+                                             DELETE FROM ${db_prefix}moderators WHERE id_member = '%{uid}';
+                                             DELETE FROM ${db_prefix}ban_items WHERE id_member = '%{uid}';
+                                             DELETE FROM ${db_prefix}themes WHERE id_member = '%{uid}'";
 
     $conf['auth']['mysql']['updateUser']  = "UPDATE ${db_prefix}members SET";
-    $conf['auth']['mysql']['UpdateLogin'] = "memberName = '%{user}'";
+    $conf['auth']['mysql']['UpdateLogin'] = "member_name = '%{user}'";
 
     // this is reason we can't use mysql.class.php directly,
     // miss a %{user} filter in original _updateUserInfo funtion
     $conf['auth']['mysql']['UpdatePass']  = "passwd = SHA1(concat(LOWER('%{user}'), '%{pass}'))";
-    $conf['auth']['mysql']['UpdateEmail'] = "emailAddress = '%{email}'";
-    $conf['auth']['mysql']['UpdateName']  = "realName = '%{name}'";
-    $conf['auth']['mysql']['UpdateTarget']= "WHERE ID_MEMBER = '%{uid}'";
+    $conf['auth']['mysql']['UpdateEmail'] = "email_address = '%{email}'";
+    $conf['auth']['mysql']['UpdateName']  = "real_name = '%{name}'";
+    $conf['auth']['mysql']['UpdateTarget']= "WHERE id_member = '%{uid}'";
 
-    // now taken care of SMF's additionalGroups as well.
+    // now taken care of SMF's additional_groups as well.
     $conf['auth']['mysql']['delUserGroup']= "UPDATE ${db_prefix}members
-                                             SET additionalGroups = TRIM(BOTH ',' REPLACE(concat(',',additionalGroups,','), concat(',','%{gid}',','), ','))
-                                             WHERE ID_MEMBER = '%{uid}'";
+                                             SET additional_groups = TRIM(BOTH ',' REPLACE(concat(',',additional_groups,','), concat(',','%{gid}',','), ','))
+                                             WHERE id_member = '%{uid}'";
 
-    $conf['auth']['mysql']['getGroupID']  = "SELECT ID_GROUP AS id FROM ${db_prefix}membergroups g WHERE g.groupName = '%{group}'";
-	
+    $conf['auth']['mysql']['getGroupID']  = "SELECT id_group AS id FROM ${db_prefix}membergroups g WHERE g.group_name = '%{group}'";
+
 	// added for utf-8 query support
 	$conf['auth']['mysql']['charset'] = "utf8";
 
 	// let auth_mysql() do the rest.
 	$this->auth_mysql();
-	
+
   }
 
   //replace mysql.class.php's original function.
@@ -165,11 +165,11 @@ class auth_smfauth extends auth_mysql {
 
     //hacked to obtain new username beforehand.
     if(!$changes['user']) {
-	    $user = mysql_fetch_array(mysql_query("SELECT DISTINCT memberName FROM ".$db_prefix."members WHERE ID_MEMBER = '$uid'"));
+      $user = mysql_fetch_array(mysql_query("SELECT DISTINCT member_name FROM ".$db_prefix."members WHERE id_member = '$uid'"));
     } else {
-	    $user['memberName'] = $changes['user'];
+      $user['member_name'] = $changes['user'];
     }
-	  
+
       if($this->dbcon) {
         foreach ($changes as $item => $value) {
           if ($item == 'user') {
@@ -188,7 +188,7 @@ class auth_smfauth extends auth_mysql {
             if ($cnt++ > 0) $sql .= ", ";
             $sql .= str_replace('%{pass}',$value,$this->cnf['UpdatePass']);
             //see $conf['auth']['mysql']['UpdatePass'] for explanation
-            $sql = str_replace('%{user}',$user['memberName'],$sql);
+            $sql = str_replace('%{user}',$user['member_name'],$sql);
           } else if ($item == 'mail') {
             if ($cnt++ > 0) $sql .= ", ";
             $sql .= str_replace('%{email}',$value,$this->cnf['UpdateEmail']);
@@ -250,7 +250,7 @@ class auth_smfauth extends auth_mysql {
 
         if ($uid) {
           // set default user in local.php to empty if you don't want to have
-          // a default user inserted in additionalGroups when user sign-up
+          // a default user inserted in additional_groups when user sign-up
           foreach($grps as $group) {
             if($group == ' ' || $group == '') {
               $gid = true;
