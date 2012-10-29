@@ -113,8 +113,8 @@ class auth_smfauth extends auth_mysql {
     // use SMF's interface as a preferable alternative.
     $conf['auth']['mysql']['delUserRefs'] = "UPDATE ${db_prefix}messages SET id_member = 0, posterEmail = '' WHERE id_member = '%{uid}';
                                              UPDATE ${db_prefix}polls SET id_member = 0 WHERE id_member = '%{uid}';
-                                             UPDATE ${db_prefix}topics SET id_member_STARTED = 0 WHERE id_member_STARTED = '%{uid}';
-                                             UPDATE ${db_prefix}topics SET id_member_UPDATED = 0 WHERE id_member_UPDATED = '%{uid}';
+                                             UPDATE ${db_prefix}topics SET id_member_started = 0 WHERE id_member_started = '%{uid}';
+                                             UPDATE ${db_prefix}topics SET id_member_updated = 0 WHERE id_member_updated = '%{uid}';
                                              UPDATE ${db_prefix}log_actions SET id_member = 0 WHERE id_member = '%{uid}';
                                              UPDATE ${db_prefix}log_banned SET id_member = 0 WHERE id_member = '%{uid}';
                                              UPDATE ${db_prefix}log_errors SET id_member = 0 WHERE id_member = '%{uid}';
@@ -155,6 +155,40 @@ class auth_smfauth extends auth_mysql {
 	$this->auth_mysql();
 
   }
+
+    function _readCookie(){
+        global $USERINFO;
+        global $conf;
+        global $cookiename, $db_prefix;
+
+        if (isset(!$_COOKIE[$cookiename]))
+            return false;
+        list ($id_member, $password) = @unserialize($_COOKIE[$cookiename]);
+        $id_member = !empty($id_member) && strlen($password) > 0 ? (int) $id_member : 0;
+        if (empty($id_member))
+            return false;
+
+        // do the checking here
+        $user = mysql_fetch_array(mysql_query("SELECT member_name, email_address, id_group, additional_groups, passwd, password_salt
+        FROM ".$db_prefix."members WHERE id_member = $id_member"));
+
+        if (sha1($user['passwd'] . $user['password_salt']) != $password)
+            return false;
+        $all_groups = !empty($user['id_group']) ? array($user['id_group']) ? array();
+        $all_groups += !empty($user['additional_groups']) ? explode(',', $user['additional_groups']) ? array();
+        $groups = mysql_fetch_array(mysql_query("SELECT group_name
+        FROM ".$db_prefix."membergroups WHERE id_group IN (" .implode(',', $all_groups)  . ")"));
+
+        // set the globals if authed
+        $USERINFO['name'] = $user['member_name'];
+        $USERINFO['mail'] = $user['email_address'];
+        $USERINFO['grps'] = array('FIXME');
+        $_SERVER['REMOTE_USER'] = $groups;
+        $_SESSION[DOKU_COOKIE]['auth']['user'] = $user['member_name'];
+        $_SESSION[DOKU_COOKIE]['auth']['pass'] = $user['passwd'];
+        $_SESSION[DOKU_COOKIE]['auth']['info'] = $USERINFO;
+        return true;
+    }
 
   //replace mysql.class.php's original function.
   function _updateUserInfo($changes, $uid) {
